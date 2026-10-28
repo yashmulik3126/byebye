@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# byebye - quit all open apps (closing their tabs) and shut down the Mac.
+
+VERSION="1.0"
+DRY_RUN=0
+VERBOSE=0
+DELAY=5
+
+usage() {
+  cat <<EOF
+Usage: byebye [options]
+
+Quit all open apps, then shut down the Mac.
+
+Options:
+  -h, --help       Show this help and exit
+  -n, --dry-run    Show what would happen, change nothing
+  -v, --verbose    More output
+  -d, --delay N    Seconds to wait before shutdown (default: $DELAY)
+EOF
+}
+
+log() { [ "$VERBOSE" -eq 1 ] && echo "$@"; return 0; }
+
+# Parse arguments
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help)    usage; exit 0 ;;
+    -n|--dry-run) DRY_RUN=1 ;;
+    -v|--verbose) VERBOSE=1 ;;
+    -d|--delay)
+      shift
+      if ! [[ "${1:-}" =~ ^[0-9]+$ ]]; then
+        echo "byebye: --delay needs a number" >&2; exit 1
+      fi
+      DELAY="$1" ;;
+    *) echo "byebye: unknown option '$1'" >&2; usage >&2; exit 1 ;;
+  esac
+  shift
+done
+
+# This only works on macOS
+if [ "$(uname)" != "Darwin" ]; then
+  echo "byebye: this tool only works on macOS" >&2
+  exit 2
+fi
+
+# Get names of all visible (non-background) apps
+APPS=$(osascript -e 'tell application "System Events" to get name of every application process whose background only is false' \
+  | tr ',' '\n' | sed 's/^ *//')
+
+# Skip Finder (can't be quit) and the apps this script may be running inside
+SKIP="Finder|Terminal|iTerm2|Code"
+
+echo "Apps to close:"
+echo "$APPS" | grep -Ev "^($SKIP)$" | sed 's/^/  - /'
+
+if [ "$DRY_RUN" -eq 1 ]; then
+  echo "[dry-run] Would shut down in $DELAY seconds. Nothing changed."
+  exit 0
+fi
+
+# Quit each app
+echo "$APPS" | grep -Ev "^($SKIP)$" | while read -r app; do
+  [ -z "$app" ] && continue
+  log "Quitting $app..."
+  osascript -e "tell application \"$app\" to quit" 2>/dev/null
+done
+
+echo "Shutting down in $DELAY seconds. Press Ctrl+C to cancel."
+sleep "$DELAY"
+
+osascript -e 'tell application "System Events" to shut down' || exit 3
