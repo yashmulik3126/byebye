@@ -2,7 +2,7 @@
 
 > `byebye` quits every open Mac app cleanly and then shuts the computer down, all from one terminal command.
 
-**Team:** Yash Mulik, Divya More
+**Team:** Yash Mulik, [Name 2]
 **Repository:** https://github.com/yashmulik3126/byebye
 **Date:** 29-10-2026
 
