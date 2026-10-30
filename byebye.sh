@@ -18,4 +18,5 @@ end repeat
 EOF
 
 sleep 3
+defaults -currentHost write com.apple.loginwindow TALLogoutSavesState -bool false
 osascript -e 'tell app "System Events" to shut down'
